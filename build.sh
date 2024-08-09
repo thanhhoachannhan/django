@@ -94,7 +94,8 @@ WSGI_APPLICATION = 'project.wsgi.application'
 AUTH_APP = 'authentication'
 APPS = [AUTH_APP, 'core']
 DJANGO_APPS = [f"django.contrib.{app}" for app in ['admin','auth','contenttypes','sessions','messages','staticfiles']]
-INSTALLED_APPS = DJANGO_APPS + [app for app in APPS if os.path.exists(BASE_DIR / app)]
+THIRTY_APPS = ['rest_framework']
+INSTALLED_APPS = DJANGO_APPS + THIRTY_APPS + [app for app in APPS if os.path.exists(BASE_DIR / app)]
 if os.path.exists(BASE_DIR / AUTH_APP) and AUTH_APP in APPS:
     AUTH_USER_MODEL = f'{AUTH_APP}.User'
     AUTHENTICATION_BACKENDS = ['authentication.backends.AuthenticationBackend']
