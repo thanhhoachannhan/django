@@ -30,6 +30,7 @@ pyclean = "^3.0.0"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 text
+poetry install
 # ================================================== #
 echo "################################################## == Project Init"
 # ================================================== #
