@@ -20,6 +20,7 @@ authors = ["Thanh"]
 python = "^3.11"
 django = "^4.0"
 pillow = "^10.4.0"
+gunicorn = "^22.0.0"
 djangorestframework = "^3.15.2"
 
 
