@@ -4,10 +4,32 @@
 echo "################################################## == Environment"
 # ================================================== #
 echo "[SETUP] - env.build"
-pip install --upgrade pip -q
-pip install django==5.0 -q
-pip install pillow==10.0 -q
-pip install gunicorn==20.0 -q
+#pip install --upgrade pip -q
+#pip install django==5.0 -q
+#pip install pillow==10.0 -q
+#pip install gunicorn==20.0 -q
+cat <<text >pyproject.toml
+[tool.poetry]
+name = "project"
+version = "0.1.0"
+description = "project"
+authors = ["Thanh"]
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^5.1"
+pillow = "^10.4.0"
+djangorestframework = "^3.15.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pyclean = "^3.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+text
 # ================================================== #
 echo "################################################## == Project Init"
 # ================================================== #
