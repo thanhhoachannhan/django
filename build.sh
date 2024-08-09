@@ -18,7 +18,7 @@ authors = ["Thanh"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-django = "^5.0"
+django = "^4.0"
 pillow = "^10.4.0"
 djangorestframework = "^3.15.2"
 
