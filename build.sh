@@ -81,6 +81,7 @@ cat <<text >project/settings.py
 """ Settings """
 import os
 from pathlib import Path
+from datetime import timedelta
 
 from django.utils.translation import gettext_lazy as _
 
