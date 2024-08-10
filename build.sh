@@ -22,6 +22,7 @@ django = "^4.0"
 pillow = "^10.4.0"
 gunicorn = "^22.0.0"
 djangorestframework = "^3.15.2"
+djangorestframework-simplejwt = "^5.3.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -161,7 +162,7 @@ MIDDLEWARE = [
 ]
 """ Redirect """
 LOGIN_URL = 'login'
-""" Loggin """
+""" Logging """
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -193,6 +194,20 @@ LOGGING = {
             'handlers': ['console', 'file'],
         },
     },
+}
+""" RestAPI """
+APPEND_SLASH = False
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5000),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=100),
 }
 """ EOF """
 text
