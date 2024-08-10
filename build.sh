@@ -451,6 +451,7 @@ text
 # ================================================== #
 echo "[CODE] - authentication.api.build"
 cat <<text >authentication/api.py
+
 from django.urls import path, include
 from django.contrib.auth import get_user_model
 
@@ -488,7 +489,7 @@ class IsGuest(permissions.BasePermission):
 
 class CurrentUser(APIView):
     # permission_classes = [IsManager]
-
+    
     def get_permissions(self):
         return [IsSuperAdmin()] if self.request.method == 'GET' else [IsGuest()]
 
@@ -496,6 +497,10 @@ class CurrentUser(APIView):
         class Meta:
             model = get_user_model()
             fields = '__all__'
+            read_only_fields = ('is_superuser', 'is_staff')
+            extra_kwargs = {
+                'password': {'write_only': True}
+            }
 
     def get(self, request):
         try:
@@ -515,7 +520,23 @@ class CurrentUser(APIView):
 
 class UpdateOwnProfile(APIView):
     permission_classes = [IsSelf]
-    pass
+
+    class UpdateOwnProfileSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = get_user_model()
+            fields = ('fullname', 'address')
+
+    def post(self, request):
+        user = request.user
+        serializer = self.UpdateOwnProfileSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {'message': 'successful'},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors)
 
 
 urlpatterns = [
@@ -526,6 +547,7 @@ urlpatterns = [
     path('user/', include([
         path('me/', include([
             path('', CurrentUser.as_view(), name='current_user'),
+            path('update/', UpdateOwnProfile.as_view(), name='update_own_profile'),
         ])),
     ]))
 ]
