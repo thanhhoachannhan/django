@@ -210,6 +210,17 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5000),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=100),
 }
+""" Celery """
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Địa chỉ của Redis broker
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Địa chỉ của Redis backend
+CELERY_TIMEZONE = 'UTC'
+
+CELERY_BEAT_SCHEDULE = {
+    'print-hello-world': {
+        'task': 'project.celery.task_one',
+        'schedule': 5,  # Lặp lại mỗi 5 giây
+    },
+}
 """ EOF """
 text
 # ================================================== #
@@ -235,6 +246,31 @@ urlpatterns += i18n_patterns(
 )
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+text
+# ================================================== #
+echo "[CODE] - celery.build"
+cat <<text >project/celery.py
+import os
+from celery import Celery, shared_task
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
+
+app = Celery('project')
+
+app.config_from_object('django.conf:settings', namespace='CELERY')
+
+app.autodiscover_tasks()
+
+
+@app.task(bind=True, ignore_result=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')
+
+
+@shared_task
+def task_one():
+    print('Hello World')
+    return 'Hello World'
 text
 # ================================================== #
 echo "################################################## == Auth app"
@@ -646,6 +682,13 @@ up:
 	python3 manage.py runserver 2000
 clear:
 	find . -mindepth 1 -not -name 'build.sh' -delete
+# https://stackoverflow.com/questions/45744992/celery-raises-valueerror-not-enough-values-to-unpack
+run_worker:
+    pip install gevent
+    celery -A project.celery worker -l info -P gevent
+
+run_beat:
+    celery -A project beat --loglevel=info
 text
 # ================================================== #
 echo "################################################## == Migrate"
