@@ -239,6 +239,7 @@ urlpatterns = [
     path('', Index.as_view(), name='index'),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
+    path('api', include('api')),
 ]
 urlpatterns += i18n_patterns(
     *[path(f'{app}/', include(f'{app}.urls')) for app in settings.APPS],
@@ -271,6 +272,110 @@ def debug_task(self):
 def task_one():
     print('Hello World')
     return 'Hello World'
+text
+# ================================================== #
+echo "[CODE] - api.build"
+cat <<text >api.py
+
+from django.urls import path, include
+from django.contrib.auth import get_user_model
+
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from rest_framework import serializers, status
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+
+
+class IsSelf(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user == obj
+
+
+class IsSuperAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_superuser
+
+
+class IsManager(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_staff
+
+
+class IsGuest(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and not (request.user.is_superuser or request.user.is_staff)
+
+
+class CurrentUser(APIView):
+    # permission_classes = [IsManager]
+    
+    def get_permissions(self):
+        return [IsSuperAdmin()] if self.request.method == 'GET' else [IsGuest()]
+
+    class CurrentUserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = get_user_model()
+            fields = '__all__'
+            read_only_fields = ('is_superuser', 'is_staff')
+            extra_kwargs = {
+                'password': {'write_only': True}
+            }
+
+    def get(self, request):
+        try:
+            serializer = self.CurrentUserSerializer(request.user)
+            return Response(serializer.data)
+        except serializers.ValidationError as ex:
+            return Response(
+                {'error': 'Invalid data', 'details': ex.detail},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as ex:
+            return Response(
+                {'error': str(ex)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class UpdateOwnProfile(APIView):
+    permission_classes = [IsSelf]
+
+    class UpdateOwnProfileSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = get_user_model()
+            fields = ('fullname', 'address')
+
+    def post(self, request):
+        user = request.user
+        serializer = self.UpdateOwnProfileSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {'message': 'successful'},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors)
+
+
+urlpatterns = [
+    path('token/', include([
+        path('', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    ])),
+    path('user/', include([
+        path('me/', include([
+            path('', CurrentUser.as_view(), name='current_user'),
+            path('update/', UpdateOwnProfile.as_view(), name='update_own_profile'),
+        ])),
+    ]))
+]
 text
 # ================================================== #
 echo "################################################## == Auth app"
@@ -485,110 +590,6 @@ class Logout(LoginRequiredMixin, View):
         return redirect(next_url)
 text
 # ================================================== #
-echo "[CODE] - authentication.api.build"
-cat <<text >authentication/api.py
-
-from django.urls import path, include
-from django.contrib.auth import get_user_model
-
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
-from rest_framework import serializers, status
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import permissions
-
-
-class IsSelf(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return request.user == obj
-
-
-class IsSuperAdmin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and request.user.is_superuser
-
-
-class IsManager(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and request.user.is_staff
-
-
-class IsGuest(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and not (request.user.is_superuser or request.user.is_staff)
-
-
-class CurrentUser(APIView):
-    # permission_classes = [IsManager]
-    
-    def get_permissions(self):
-        return [IsSuperAdmin()] if self.request.method == 'GET' else [IsGuest()]
-
-    class CurrentUserSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = get_user_model()
-            fields = '__all__'
-            read_only_fields = ('is_superuser', 'is_staff')
-            extra_kwargs = {
-                'password': {'write_only': True}
-            }
-
-    def get(self, request):
-        try:
-            serializer = self.CurrentUserSerializer(request.user)
-            return Response(serializer.data)
-        except serializers.ValidationError as ex:
-            return Response(
-                {'error': 'Invalid data', 'details': ex.detail},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as ex:
-            return Response(
-                {'error': str(ex)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class UpdateOwnProfile(APIView):
-    permission_classes = [IsSelf]
-
-    class UpdateOwnProfileSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = get_user_model()
-            fields = ('fullname', 'address')
-
-    def post(self, request):
-        user = request.user
-        serializer = self.UpdateOwnProfileSerializer(user, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {'message': 'successful'},
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors)
-
-
-urlpatterns = [
-    path('token/', include([
-        path('', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-        path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    ])),
-    path('user/', include([
-        path('me/', include([
-            path('', CurrentUser.as_view(), name='current_user'),
-            path('update/', UpdateOwnProfile.as_view(), name='update_own_profile'),
-        ])),
-    ]))
-]
-text
-# ================================================== #
 echo "[CODE] - authentication.urls.build"
 cat <<text >authentication/urls.py
 from django.urls import path, include
@@ -600,7 +601,6 @@ app_name = 'authentication'
 urlpatterns = [
     path('login/', Login.as_view(), name='login'),
     path('logout/', Logout.as_view(), name='logout'),
-    path('api/', include('authentication.api')),
 ]
 text
 # ================================================== #
